@@ -158,4 +158,27 @@ module PuppetLitmus::Serverspec
     yield result if block_given?
     result
   end
+
+  # Runs a script against the target system.
+  #
+  # @param script [String] The path to the script on the source machine
+  # @return [Object] A result object from the script run.
+  def script_run(script, opts = {})
+    target_node_name = ENV['TARGET_HOST'] if target_node_name.nil?
+    inventory_hash = if target_node_name.nil? || target_node_name == 'localhost'
+                       nil
+                     else
+                       inventory_hash_from_inventory_file
+                     end
+    
+    result = run_script(script, target_node_name, options: opts, config: nil, inventory: inventory_hash)
+
+    raise "script run failed\n`#{script}`\n======\n#{result}" if result.first['status'] != 'success'
+
+    result = OpenStruct.new(exit_code: result.first['result']['exit_code'],
+                            stdout: result.first['result']['stdout'],
+                            stderr: result.first['result']['stderr'])
+    yield result if block_given?
+    result
+  end
 end
